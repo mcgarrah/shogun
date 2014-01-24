@@ -30,6 +30,10 @@ struct timeval {
 };
 #endif /* _TIMEVAL_DEFINED */
 
+#ifdef __MINGW32__
+#include <windows.h>
+#endif
+
 int gettimeofday(struct timeval* tp, void* tzp) {
     DWORD t;
     t = timeGetTime();

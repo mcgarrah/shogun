@@ -56,15 +56,27 @@
 #define M_PI 3.14159265358979323846
 #endif
 
-#ifdef _WIN32
-#ifndef isnan
-#define isnan _isnan
+//#ifdef _WIN32
+//#ifndef isnan
+//#define isnan _isnan
+//#endif
+//
+//#ifndef isfinite
+//#define isfinite _isfinite
+//#endif
+//#endif //_WIN32
+
+#if defined(_MSC_VER)
+#define isnan(x) _isnan(x)
+#elif defined(__MINGW32__) || defined(__CYGWIN__)
+#define isnan(x) (std::isnan(x))
 #endif
 
-#ifndef isfinite
-#define isfinite _isfinite
+#if defined(_MSC_VER)
+#define FINITE(x) _finite(static_cast<double>(x))    
+#else
+#define FINITE(x) (isfinite(x))
 #endif
-#endif //_WIN32
 
 #ifndef NAN
 #include <stdlib.h>
