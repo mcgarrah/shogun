@@ -83,6 +83,12 @@
 #define NAN (strtod("NAN",NULL))
 #endif
 
+#if defined(_MSC_VER)
+#define jn(n,x) _jn(n,x)
+//#elif defined(__MINGW32__)
+//#define jn(n,x) _jn(n,x)
+#endif
+
 /* Size of RNG seed */
 #define RNG_SEED_SIZE 256
 
