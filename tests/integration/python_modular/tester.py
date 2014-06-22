@@ -10,6 +10,9 @@ import difflib
 
 from generator import setup_tests, get_fname, blacklist, get_test_mod, run_test
 
+def is_python2():
+	return sys.version_info[0]==2
+
 def typecheck(a, b):
 	if str(type(a)).find('shogun')>=0 and \
 		str(type(a)).find('Labels')>=0 and \
@@ -18,86 +21,72 @@ def typecheck(a, b):
 		 return True
 	return type(a) == type(b)
 
+def compare_floats(a,b, tolerance):
+	import numpy as np
+	# we will see underflow errors and whatnot / mute them
+	np.seterr(all='ignore')
+	# inspired by http://floating-point-gui.de/errors/comparison/
+	diff = np.abs(a - b)
+
+	ok_idx = a == b
+	near_zero_idx = ((a * b) == 0) & ~ok_idx
+	other_idx = ~ (ok_idx | near_zero_idx)
+
+	ok_idx[near_zero_idx] = np.abs(a[near_zero_idx]-b[near_zero_idx]) < tolerance**2
+	ok_idx[other_idx] = np.abs(a[other_idx]-b[other_idx]) / (np.abs(a)[other_idx] + np.abs(b)[other_idx]) < tolerance
+	#if not np.all(ok_idx == True):
+	#	bad=ok_idx == False
+	#	print("a", a[bad])
+	#	print("b", a[bad])
+	#	import pdb
+	#	pdb.set_trace()
+		
+	return np.all(ok_idx == True)
+
 
 def compare(a, b, tolerance, sgtolerance):
-	if not typecheck(a,b): return False
+	if not typecheck(a,b):
+		return False
 
 	if type(a) == numpy.ndarray:
-		if tolerance:
-			return numpy.max(numpy.abs(a - b)) < tolerance
-		else:
-			return numpy.all(a == b)
+		if a.dtype != b.dtype:
+			return False
+		if a.dtype != numpy.floating or tolerance == 0:
+			return numpy.all(a==b)
+		return compare_floats(a,b, tolerance)
 	elif isinstance(a, modshogun.SGObject):
 		a.io.set_loglevel(modshogun.MSG_ERROR)
 		if pickle.dumps(a) == pickle.dumps(b):
 			result = True
 		else:
-			result = a.equals(b, sg_tolerance)
+			result = a.equals(b, sgtolerance, True)
 
 		# print debug output in case of failure
 		if not result:
+			pickle.dump(a, open('/tmp/a','wb'))
+			pickle.dump(b, open('/tmp/b','wb'))
 			print("Equals failed with debug output")
 			old_loglevel=a.io.get_loglevel()
 			a.io.set_loglevel(modshogun.MSG_INFO)
-			a.equals(b, shogun_tolerance)
+			a.equals(b, sgtolerance, True)
 			a.io.set_loglevel(old_loglevel)
 
 		return result
 	elif type(a) in (tuple,list):
 		if len(a) != len(b): return False
 		for obj1, obj2 in zip(a,b):
-			if not compare(obj1, obj2, tolerance, sgtolerance): return False
+			if not compare(obj1, obj2, tolerance, sgtolerance):
+				return False
 		return True
+	elif type(a) == float:
+		return compare_floats(numpy.array([a]), numpy.array([b]), tolerance)
 
 	return a == b
 
 def compare_dbg(a, b, tolerance, sgtolerance):
-	if not compare_dbg_helper(a, b, tolerance, sgtolerance):
+	if not compare(a, b, tolerance, sgtolerance):
 		import pdb
 		pdb.set_trace()
-
-def compare_dbg_helper(a, b, tolerance, sgtolerance):
-	if not typecheck(a,b):
-		print("Type mismatch (type(a)=%s vs type(b)=%s)" % (str(type(a)),str(type(b))))
-		return False
-
-	if type(a) == numpy.ndarray:
-		if tolerance:
-			if numpy.max(numpy.abs(a - b)) < tolerance:
-				return True
-			else:
-				print("Numpy Array mismatch > max_tol")
-				print(a-b)
-				return False
-		else:
-			if numpy.all(a == b):
-				return True
-			else:
-				print("Numpy Array mismatch")
-				print(a-b)
-				return False
-	elif isinstance(a, modshogun.SGObject):
-		if pickle.dumps(a) == pickle.dumps(b):
-			return True
-		print("a", pickle.dumps(a))
-		print("b", pickle.dumps(b))
-		return False
-	elif type(a) in (tuple,list):
-		if len(a) != len(b):
-			print("Length mismatch (len(a)=%d vs len(b)=%d)" % (len(a), len(b)))
-			return False
-		for obj1, obj2 in zip(a,b):
-			if not compare_dbg(obj1, obj2, tolerance):
-				return False
-		return True
-
-	if (a==b):
-		return True
-	else:
-		print("a!=b")
-		print("a", a)
-		print("b", b)
-		return False
 
 def get_fail_string(a):
 	failed_string = []
@@ -120,7 +109,7 @@ def get_split_string(a):
 		strs.extend(e.replace('\\n','\n').splitlines())
 	return strs
 
-def tester(tests, cmp_method):
+def tester(tests, cmp_method, opts):
 	failed=[]
 	sgtolerance = opts.sgtolerance
 	tolerance = opts.tolerance
@@ -160,7 +149,7 @@ def tester(tests, cmp_method):
 
 
 				try:
-					if cmp_method(a,b,tolerance):
+					if cmp_method(a,b,tolerance,sgtolerance):
 						if not failures and not missing:
 							print("%-60s OK" % setting_str)
 					else:
@@ -188,7 +177,7 @@ if __name__=='__main__':
 				help="show only failures")
 	op.add_option("-m", "--missing", action="store_true", default=False,
 				help="show only missing tests")
-	op.add_option("-t", "--tolerance", action="store", default=1e-15,
+	op.add_option("-t", "--tolerance", action="store", default=1e-13,
 	              help="tolerance used to compare numbers")
 	op.add_option("-s", "--sgtolerance", action="store", default=1e-5,
 	              help="shogun tolerance used to compare numbers in shogun objects")
@@ -206,21 +195,22 @@ if __name__=='__main__':
 		for f in failed:
 			print("\t" + f[0])
 
-		print("Detailed failures:")
-		for f in failed:
-			print("\t" + f[0])
-			got=get_split_string(f[1])
-			expected=get_split_string(f[2])
-			#print "=== EXPECTED =========="
-			#import pdb
-			#pdb.set_trace()
-			#print '\n'.join(expected)
-			#print "=== GOT ==============="
-			#print '\n'.join(got)
-			print("====DIFF================")
-			print('\n'.join(difflib.unified_diff(expected, got, fromfile='expected', tofile='got')))
-			print("====EOT================")
-			print("\n\n\n")
+		if is_python2():
+			print("Detailed failures:")
+			for f in failed:
+				print("\t" + f[0])
+				got=get_split_string(f[1])
+				expected=get_split_string(f[2])
+				#print "=== EXPECTED =========="
+				#import pdb
+				#pdb.set_trace()
+				#print '\n'.join(expected)
+				#print "=== GOT ==============="
+				#print '\n'.join(got)
+				print("====DIFF================")
+				print('\n'.join(difflib.unified_diff(expected, got, fromfile='expected', tofile='got')))
+				print("====EOT================")
+				print("\n\n\n")
 
 		sys.exit(1)
 	sys.exit(0)

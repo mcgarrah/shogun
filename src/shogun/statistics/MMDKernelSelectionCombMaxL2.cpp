@@ -21,7 +21,7 @@ CMMDKernelSelectionCombMaxL2::CMMDKernelSelectionCombMaxL2() :
 }
 
 CMMDKernelSelectionCombMaxL2::CMMDKernelSelectionCombMaxL2(
-		CKernelTwoSampleTestStatistic* mmd) : CMMDKernelSelectionComb(mmd)
+		CKernelTwoSampleTest* mmd) : CMMDKernelSelectionComb(mmd)
 {
 	/* currently, this method is only developed for the linear time MMD */
 	REQUIRE(mmd->get_statistic_type()==S_QUADRATIC_TIME_MMD ||
@@ -34,7 +34,6 @@ CMMDKernelSelectionCombMaxL2::~CMMDKernelSelectionCombMaxL2()
 {
 }
 
-#ifdef HAVE_LAPACK
 SGVector<float64_t> CMMDKernelSelectionCombMaxL2::compute_measures()
 {
 	/* cast is safe due to assertion in constructor */
@@ -69,4 +68,3 @@ SGVector<float64_t> CMMDKernelSelectionCombMaxL2::compute_measures()
 
 	return result;
 }
-#endif

@@ -13,8 +13,11 @@
 #ifndef CLIKELIHOODMODEL_H_
 #define CLIKELIHOODMODEL_H_
 
+#include <shogun/lib/config.h>
+
 #include <shogun/base/SGObject.h>
 #include <shogun/labels/Labels.h>
+#include <shogun/lib/SGMatrix.h>
 
 namespace shogun
 {
@@ -26,7 +29,8 @@ enum ELikelihoodModelType
 	LT_GAUSSIAN=10,
 	LT_STUDENTST=20,
 	LT_LOGIT=30,
-	LT_PROBIT=40
+	LT_PROBIT=40,
+	LT_SOFTMAX=50
 };
 
 /** @brief The Likelihood model base class.
@@ -308,6 +312,42 @@ public:
 	 * @return false
 	 */
 	virtual bool supports_multiclass() const { return false; }
+
+	/** set the variational distribution given data and parameters
+	 *
+	 * @param mu mean of the variational distribution
+	 * @param s2 variance of the variational distribution
+	 * @param lab labels/data used
+	 *
+	 */
+	virtual void set_variational_distribution(SGVector<float64_t> mu, SGVector<float64_t> s2, const CLabels* lab)
+	{
+		SG_ERROR("Set variational distribution not implemented for %s\n", get_name());
+	}
+
+	/** returns the expection of the logarithm of a given probability distribution 
+	 * wrt the variational distribution.
+	 *
+	 * @return expection
+	 */
+	virtual SGVector<float64_t> get_variational_expection()
+	{
+		SG_ERROR("Variational expectation not implemented for %s\n", get_name());
+		return SGVector<float64_t>();
+	}
+
+	/** get derivative of the variational expection of log likelihood 
+	 * with respect to given parameter
+	 *
+	 * @param param parameter
+	 *
+	 * @return derivative
+	 */
+	virtual SGVector<float64_t> get_variational_first_derivative(const TParameter* param) const
+	{
+		SG_ERROR("Variational derivative not implemented for %s\n", get_name());
+		return SGVector<float64_t>();
+	}
 };
 }
 #endif /* CLIKELIHOODMODEL_H_ */

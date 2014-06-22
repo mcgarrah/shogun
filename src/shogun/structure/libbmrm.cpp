@@ -14,7 +14,9 @@
 #include <shogun/structure/libbmrm.h>
 #include <shogun/lib/external/libqp.h>
 #include <shogun/lib/Time.h>
-#include <shogun/io/SGIO.h>
+
+#include <climits>
+#include <limits>
 
 namespace shogun
 {
@@ -22,7 +24,7 @@ static const uint32_t QPSolverMaxIter=0xFFFFFFFF;
 static const float64_t epsilon=0.0;
 
 static float64_t *H;
-static uint32_t BufSize;
+uint32_t BufSize;
 
 void add_cutting_plane(
 		bmrm_ll**	tail,
@@ -32,7 +34,8 @@ void add_cutting_plane(
 		float64_t*	cp_data,
 		uint32_t	dim)
 {
-	ASSERT(map[free_idx])
+	REQUIRE(map[free_idx],
+		"add_cutting_plane: CP index %u is not free\n", free_idx)
 
 	LIBBMRM_MEMCPY(A+free_idx*dim, cp_data, dim*sizeof(float64_t));
 	map[free_idx]=false;
@@ -166,6 +169,7 @@ void clean_icp(ICP_stats* icp_stats,
 					icp_stats->H_buff[LIBBMRM_INDEX(i, j, icp_stats->maxCPs)];
 
 		bmrm.nCP=nCP_new;
+		ASSERT(bmrm.nCP<BufSize);
 	}
 }
 
@@ -188,7 +192,7 @@ BmrmStatistics svm_bmrm_solver(
 		uint32_t         cleanAfter,
 		float64_t        K,
 		uint32_t         Tmax,
-		bool             verbose)
+		bool             store_train_info)
 {
 	BmrmStatistics bmrm;
 	libqp_state_T qp_exitflag={0, 0, 0, 0};
@@ -214,6 +218,7 @@ BmrmStatistics svm_bmrm_solver(
 	BufSize=_BufSize;
 	QPSolverTolRel=1e-9;
 
+	uint32_t histSize = BufSize;
 	H=NULL;
 	b=NULL;
 	beta=NULL;
@@ -223,6 +228,7 @@ BmrmStatistics svm_bmrm_solver(
 	I=NULL;
 	prevW=NULL;
 
+
 	H= (float64_t*) LIBBMRM_CALLOC(BufSize*BufSize, float64_t);
 
 	if (H==NULL)
@@ -231,7 +237,15 @@ BmrmStatistics svm_bmrm_solver(
 		goto cleanup;
 	}
 
-	A= (float64_t*) LIBBMRM_CALLOC(nDim*BufSize, float64_t);
+	ASSERT(nDim > 0);
+	ASSERT(BufSize > 0);
+	REQUIRE(BufSize < (std::numeric_limits<size_t>::max() / nDim),
+		"overflow: %u * %u > %u -- biggest possible BufSize=%u or nDim=%u\n",
+		BufSize, nDim, std::numeric_limits<size_t>::max(),
+		(std::numeric_limits<size_t>::max() / nDim),
+		(std::numeric_limits<size_t>::max() / BufSize));
+
+	A= (float64_t*) LIBBMRM_CALLOC(size_t(nDim)*size_t(BufSize), float64_t);
 
 	if (A==NULL)
 	{
@@ -337,9 +351,9 @@ BmrmStatistics svm_bmrm_solver(
 		goto cleanup;
 	}
 
-	bmrm.hist_Fp = SGVector< float64_t >(BufSize);
-	bmrm.hist_Fd = SGVector< float64_t >(BufSize);
-	bmrm.hist_wdist = SGVector< float64_t >(BufSize);
+	bmrm.hist_Fp = SGVector< float64_t >(histSize);
+	bmrm.hist_Fd = SGVector< float64_t >(histSize);
+	bmrm.hist_wdist = SGVector< float64_t >(histSize);
 
 	/* Iinitial solution */
 	R=machine->risk(subgrad, W);
@@ -370,9 +384,7 @@ BmrmStatistics svm_bmrm_solver(
 	tstop=ttime.cur_time_diff(false);
 
 	/* Verbose output */
-
-	if (verbose)
-		SG_SDEBUG("%4d: tim=%.3lf, Fp=%lf, Fd=%lf, R=%lf\n",
+	SG_SINFO("%4d: tim=%.3lf, Fp=%lf, Fd=%lf, R=%lf\n",
 				bmrm.nIter, tstop-tstart, bmrm.Fp, bmrm.Fd, R);
 
 	/* store Fp, Fd and wdist history */
@@ -380,11 +392,11 @@ BmrmStatistics svm_bmrm_solver(
 	bmrm.hist_Fd[0]=bmrm.Fd;
 	bmrm.hist_wdist[0]=0.0;
 
-	if (verbose)
+	if (store_train_info)
 		helper = machine->get_helper();
 
 	/* main loop */
-
+	ASSERT(bmrm.nCP<BufSize);
 	while (bmrm.exitflag==0)
 	{
 		tstart=ttime.cur_time_diff(false);
@@ -417,8 +429,9 @@ BmrmStatistics svm_bmrm_solver(
 		diag_H[bmrm.nCP]=H[LIBBMRM_INDEX(bmrm.nCP, bmrm.nCP, BufSize)];
 		I[bmrm.nCP]=1;
 
-		bmrm.nCP++;
 		beta[bmrm.nCP]=0.0; // [beta; 0]
+		bmrm.nCP++;
+		ASSERT(bmrm.nCP<BufSize);
 
 #if 0
 		/* TODO: scaling...*/
@@ -488,37 +501,33 @@ BmrmStatistics svm_bmrm_solver(
 		wdist=CMath::sqrt(sq_norm_Wdiff);
 
 		/* Stopping conditions */
-
 		if (bmrm.Fp - bmrm.Fd <= TolRel*LIBBMRM_ABS(bmrm.Fp))
 			bmrm.exitflag=1;
 
 		if (bmrm.Fp - bmrm.Fd <= TolAbs)
 			bmrm.exitflag=2;
 
-		if (bmrm.nCP >= BufSize)
-			bmrm.exitflag=-1;
-
 		tstop=ttime.cur_time_diff(false);
 
 		/* Verbose output */
-
-		if (verbose)
-			SG_SDEBUG("%4d: tim=%.3lf, Fp=%lf, Fd=%lf, (Fp-Fd)=%lf, (Fp-Fd)/Fp=%lf, R=%lf, nCP=%d, nzA=%d, QPexitflag=%d\n",
+		SG_SINFO("%4d: tim=%.3lf, Fp=%lf, Fd=%lf, (Fp-Fd)=%lf, (Fp-Fd)/Fp=%lf, R=%lf, nCP=%d, nzA=%d, QPexitflag=%d\n",
 					bmrm.nIter, tstop-tstart, bmrm.Fp, bmrm.Fd, bmrm.Fp-bmrm.Fd,
 					(bmrm.Fp-bmrm.Fd)/bmrm.Fp, R, bmrm.nCP, bmrm.nzA, qp_exitflag.exitflag);
 
+		// iteration exceeds histSize
+		if (bmrm.nIter >= histSize)
+		{
+			histSize += BufSize;
+			bmrm.hist_Fp.resize_vector(histSize);
+			bmrm.hist_Fd.resize_vector(histSize);
+			bmrm.hist_wdist.resize_vector(histSize);
+		}
+
 		/* Keep Fp, Fd and w_dist history */
+		ASSERT(bmrm.nIter < histSize);
 		bmrm.hist_Fp[bmrm.nIter]=bmrm.Fp;
 		bmrm.hist_Fd[bmrm.nIter]=bmrm.Fd;
 		bmrm.hist_wdist[bmrm.nIter]=wdist;
-
-		/* Check size of Buffer */
-
-		if (bmrm.nCP>=BufSize)
-		{
-			bmrm.exitflag=-2;
-			SG_SERROR("Buffer exceeded.\n")
-		}
 
 		/* keep W (for wdist history track) */
 		LIBBMRM_MEMCPY(prevW, W, nDim*sizeof(float64_t));
@@ -527,27 +536,40 @@ BmrmStatistics svm_bmrm_solver(
 		if (cleanICP)
 		{
 			clean_icp(&icp_stats, bmrm, &CPList_head, &CPList_tail, H, diag_H, beta, map, cleanAfter, b, I);
+			ASSERT(bmrm.nCP<BufSize);
 		}
+
+		// next CP would exceed BufSize
+		if (bmrm.nCP+1 >= BufSize)
+			bmrm.exitflag=-1;
 
 		/* Debug: compute objective and training error */
-		if (verbose)
+		if (store_train_info)
 		{
-			SGVector<float64_t> w_debug(W, nDim, false);
-			float64_t primal = CSOSVMHelper::primal_objective(w_debug, model, _lambda);
-			float64_t train_error = CSOSVMHelper::average_loss(w_debug, model);
+			float64_t info_tstart=ttime.cur_time_diff(false);
+
+			SGVector<float64_t> w_info(W, nDim, false);
+			float64_t primal = CSOSVMHelper::primal_objective(w_info, model, _lambda);
+			float64_t train_error = CSOSVMHelper::average_loss(w_info, model);
 			helper->add_debug_info(primal, bmrm.nIter, train_error);
+
+			float64_t info_tstop=ttime.cur_time_diff(false);
+			
+			SG_SINFO("On iteration %4d, tim=%.3lf, primal=%.3lf, train_error=%lf\n", bmrm.nIter, info_tstop-info_tstart, primal, train_error);
 		}
+
 	} /* end of main loop */
 
-	if (verbose)
+	if (store_train_info)
 	{
 		helper->terminate();
 		SG_UNREF(helper);
 	}
 
-	bmrm.hist_Fp.resize_vector(bmrm.nIter);
-	bmrm.hist_Fd.resize_vector(bmrm.nIter);
-	bmrm.hist_wdist.resize_vector(bmrm.nIter);
+	ASSERT(bmrm.nIter+1 <= histSize);
+	bmrm.hist_Fp.resize_vector(bmrm.nIter+1);
+	bmrm.hist_Fd.resize_vector(bmrm.nIter+1);
+	bmrm.hist_wdist.resize_vector(bmrm.nIter+1);
 
 	cp_ptr=CPList_head;
 

@@ -12,20 +12,22 @@
 #ifndef _KERNEL_MACHINE_H__
 #define _KERNEL_MACHINE_H__
 
+#include <shogun/lib/config.h>
+
 #include <shogun/lib/common.h>
-#include <shogun/io/SGIO.h>
-#include <shogun/kernel/Kernel.h>
-#include <shogun/kernel/CustomKernel.h>
-#include <shogun/labels/Labels.h>
 #include <shogun/machine/Machine.h>
+#include <shogun/lib/SGVector.h>
 
 #include <stdio.h>
 
 namespace shogun
 {
-class CMachine;
 class CLabels;
+class CBinaryLabels;
+class CRegressionLabels;
 class CKernel;
+class CCustomKernel;
+class CFeatures;
 
 /** @brief A generic KernelMachine interface.
  *

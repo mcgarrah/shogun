@@ -65,10 +65,15 @@ CFITCInferenceMethod* CFITCInferenceMethod::obtain_from_generic(
 
 void CFITCInferenceMethod::update()
 {
+	SG_DEBUG("entering\n");
+
 	CInferenceMethod::update();
 	update_chol();
 	update_alpha();
 	update_deriv();
+	update_parameter_hash();
+
+	SG_DEBUG("leaving\n");
 }
 
 void CFITCInferenceMethod::check_members() const
@@ -86,7 +91,7 @@ void CFITCInferenceMethod::check_members() const
 
 SGVector<float64_t> CFITCInferenceMethod::get_diagonal_vector()
 {
-	if (update_parameter_hash())
+	if (parameter_hash_changed())
 		update();
 
 	// get the sigma variable from the Gaussian likelihood model
@@ -103,7 +108,7 @@ SGVector<float64_t> CFITCInferenceMethod::get_diagonal_vector()
 
 float64_t CFITCInferenceMethod::get_negative_log_marginal_likelihood()
 {
-	if (update_parameter_hash())
+	if (parameter_hash_changed())
 		update();
 
 	// create eigen representations of chol_utr, dg, r, be
@@ -124,7 +129,7 @@ float64_t CFITCInferenceMethod::get_negative_log_marginal_likelihood()
 
 SGVector<float64_t> CFITCInferenceMethod::get_alpha()
 {
-	if (update_parameter_hash())
+	if (parameter_hash_changed())
 		update();
 
 	SGVector<float64_t> result(m_alpha);
@@ -133,7 +138,7 @@ SGVector<float64_t> CFITCInferenceMethod::get_alpha()
 
 SGMatrix<float64_t> CFITCInferenceMethod::get_cholesky()
 {
-	if (update_parameter_hash())
+	if (parameter_hash_changed())
 		update();
 
 	SGMatrix<float64_t> result(m_L);
@@ -157,12 +162,10 @@ void CFITCInferenceMethod::update_train_kernel()
 	CInferenceMethod::update_train_kernel();
 
 	// create kernel matrix for latent features
-	m_kernel->cleanup();
 	m_kernel->init(m_latent_features, m_latent_features);
 	m_kuu=m_kernel->get_kernel_matrix();
 
 	// create kernel matrix for latent and training features
-	m_kernel->cleanup();
 	m_kernel->init(m_latent_features, m_features);
 	m_ktru=m_kernel->get_kernel_matrix();
 }
@@ -457,8 +460,6 @@ SGVector<float64_t> CFITCInferenceMethod::get_derivative_wrt_kernel(
 			m_kernel->init(m_latent_features, m_features);
 			deriv_tru=m_kernel->get_parameter_gradient(param, i);
 		}
-
-		m_kernel->cleanup();
 
 		// create eigen representation of derivatives
 		Map<VectorXd> ddiagKi(deriv_trtr.vector, deriv_trtr.vlen);

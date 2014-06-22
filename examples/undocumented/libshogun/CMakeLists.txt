@@ -16,7 +16,7 @@ SET(EXAMPLES
 	classifier_lda
 	classifier_multiclasslinearmachine
 	classifier_knn
-	kernel_gaussian kernel_revlin kernel_custom
+	kernel_gaussian kernel_revlin kernel_custom kernel_custom_index
 	library_dyn_int library_gc_array library_indirect_object
 	library_hash parameter_set_from_parameters
 	parameter_iterate_float64 parameter_iterate_sgobject
@@ -42,6 +42,7 @@ SET(EXAMPLES
 	modelselection_grid_search_kernel
 	modelselection_grid_search_string_kernel
 	modelselection_grid_search_multiclass_svm
+	modelselection_grid_search_mkl
 	modelselection_combined_kernel_sub_parameters
 	features_dense_real_modular
 	features_subset_stack
@@ -50,7 +51,8 @@ SET(EXAMPLES
 	features_copy_subset_sparse_features
 	labels_binary_fit_sigmoid
 	mathematics_confidence_intervals
-	clustering_kmeans base_parameter_map
+	clustering_kmeans
+	base_parameter_map
 	base_load_file_parameters
 	base_load_all_file_parameters
 	base_map_parameters
@@ -106,10 +108,13 @@ SET(EXAMPLES
 	io_linereader
 	library_circularbuffer
 	so_factorgraph
+	io_libsvm_multilabel
+	variational_approx_example
+	so_fg_multilabel
 )
 
 IF (USE_MOSEK)
-	LIST(APPEND EXAMPLES so_fg_model so_multiclass)
+	LIST(APPEND EXAMPLES so_fg_model so_multiclass so_multilabel)
 ENDIF ()
 
 FOREACH(EXAMPLE ${EXAMPLES})
@@ -124,7 +129,7 @@ FOREACH(EXAMPLE ${EXAMPLES})
 	LIST(APPEND INSTALL_EXAMPLES ${CMAKE_CURRENT_BINARY_DIR}/${EXAMPLE})
 ENDFOREACH()
 
-INSTALL(FILES ${INSTALL_EXAMPLES}
+INSTALL(PROGRAMS ${INSTALL_EXAMPLES}
 	DESTINATION share/shogun/examples/libshogun
 	COMPONENT libshogun-examples)
 

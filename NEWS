@@ -1,11 +1,55 @@
-2014-02-06 Soeren Sonnenburg <sonne@debian.org>
+2014-03-01 Soeren Sonnenburg <sonne@debian.org>
 
-	* SHOGUN Release version 3.1.2 (libshogun 15.1, data 0.7, parameter 1)
+	* SHOGUN Release version 3.2.1 (libshogun 16.1, data 0.8, parameter 1)
 	* This release also contains several cleanups and bugfixes:
 	* Features:
-		- None
+		- ID3 algorithm for decision tree learning [Parijat Mazumdar]
+		- New modes for PCA matrix factorizations: SVD & EVD, in-place or reallocating [Parijat Mazumdar]
+		- Add Neural Networks with linear, logistic and softmax neurons [Khaled Nasr]
+		- Add kernel multiclass strategy examples in multiclass notebook [Saurabh Mahindre]
+		- Add decision trees notebook containing examples for ID3 algorithm [Parijat Mazumdar]
+		- Add sudoku recognizer ipython notebook [Alejandro Hernandez]
+		- Add in-place subsets on features, labels, and custom kernels [Heiko Strathmann]
+		- Add Principal Component Analysis notebook [Abhijeet Kislay]
+		- Add Multiple Kernel Learning notebook [Saurabh Mahindre]
+		- Add Multi-Label classes to enable Multi-Label classification [Thoralf Klein]
+		- Add rectified linear neurons, dropout and max-norm regularization to neural networks [Khaled Nasr]
+		- Add C4.5 algorithm for multiclass classification using decision trees [Parijat Mazumdar]
+		- Add support for arbitrary acyclic graph-structured neural networks [Khaled Nasr]
+		- Add CART algorithm for classification and regression using decision trees [Parijat Mazumdar]
+		- Add CHAID algorithm for multiclass classification and regression using decision trees [Parijat Mazumdar]
+		- Add Convolutional Neural Networks [Khaled Nasr]
+		- Add Random Forests algorithm for ensemble learning using CART [Parijat Mazumdar] 
+		- Add Restricted Botlzmann Machines [Khaled Nasr]
 	* Bugfixes:
-		- None
+		- Fix reference counting bugs in CList when reference counting is on [Heiko Strathmann, Thoralf Klein, lambday]
+		- Fix memory problem in PCA::apply_to_feature_matrix [Parijat Mazumdar]
+		- Fix crash in LeastAngleRegression for the case D greater than N [Parijat Mazumdar]
+		- Fix memory violations in bundle method solvers [Thoralf Klein]
+		- Fix fail in library_mldatahdf5.cpp example when http://mldata.org is not working properly [Parijat Mazumdar]
+		- Fix memory leaks in Vowpal Wabbit, LibSVMFile and KernelPCA [Thoralf Klein]
+		- Fix memory and control flow issues discovered by Coverity [Thoralf Klein]
+	* Cleanup and API Changes:
+		- PCA now depends on Eigen3 instead of LAPACK [Parijat Mazumdar]
+		- Removing redundant and fixing implicit imports [Thoralf Klein]
+
+2014-02-17 Soeren Sonnenburg <sonne@debian.org>
+
+	* SHOGUN Release version 3.2.0 (libshogun 16.0, data 0.8, parameter 1)
+	* This release also contains several cleanups and bugfixes:
+	* Features:
+		- Fully support python3 now
+		- Add mini-batch k-means [Parijat Mazumdar]
+		- Add k-means++ [Parijat Mazumdar]
+		- Add sub-sequence string kernel [lambday]
+	* Bugfixes:
+		- Compile fixes for upcoming swig3.0
+		- Speedup for gaussian process' apply()
+		- Improve unit / integration test checks
+		- libbmrm uninitialized memory reads [Thoralf Klein]
+		- libocas uninitialized memory reads
+		- Octave 3.8 compile fixes [Orion Poplawski]
+		- Fix java modular compile error [Bjoern Esser]
 	* Cleanup and API Changes:
 		- None
 
@@ -27,7 +71,7 @@
 		- Add multiclass ipython notebook tutorials [Chiyuan Zhang]
 		- Add learning of StreamingSparseFeatures in OnlineLibLinear [Thoralf Klein]
 	* Bugfixes:
-		- Decrease memory footprint of SGObject
+		- Decrease memory footprint of SGObject [Thoralf Klein]
 		- Fix protobuf detection
 		- Fix doxygen files and various doxygen errors
 		- Fix compile error with directors
@@ -39,8 +83,7 @@
 		- Fix LabelsFactory methods' object ownership in SWIG interfaces with the %newobject directive.
 	* Cleanup and API Changes:
 		- Introduce slim SGRefObject for refcounted objects as base class of
-		SGObject [Thoralf Klein]
-
+		  SGObject [Thoralf Klein]
 
 2013-10-28 Soeren Sonnenburg <sonne@debian.org>
 
@@ -92,7 +135,7 @@
 		- Fix json serialization.
 		- Fixed bugs in FITC inference method that caused wrong posterior results.
 		- Fixed bugs in GP Regression that caused negative values for the variances.
-		- Fixed two memory errors in the streaming-features framework.
+		- Fixed two memory errors in the streaming-features framework. [Thoralf Klein]
 		- Fixed bug in the Kernel Mean Matching implementation (thanks to Meghana Kshirsagar).
 	* Cleanup and API Changes:
 		- Switch compile system to cmake

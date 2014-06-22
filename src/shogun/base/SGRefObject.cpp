@@ -10,12 +10,12 @@
  * Copyright (C) 2008-2009 Fraunhofer Institute FIRST and Max Planck Society
  */
 
-#include <shogun/base/init.h>
+#include <shogun/lib/config.h>
+#include <shogun/lib/memory.h>
+
 #include <shogun/base/SGRefObject.h>
 #include <shogun/io/SGIO.h>
-
-#include <stdlib.h>
-#include <stdio.h>
+#include <shogun/lib/RefCount.h>
 
 using namespace shogun;
 
@@ -30,8 +30,9 @@ SGRefObject::SGRefObject()
 SGRefObject::SGRefObject(const SGRefObject& orig)
 {
 	init();
-	m_refcount = orig.m_refcount;
-	SG_REF(this);
+	m_refcount = new RefCount(0);
+
+	SG_SGCDEBUG("SGRefObject copied (%p)\n", this)
 }
 
 SGRefObject::~SGRefObject()
@@ -75,6 +76,11 @@ int32_t SGRefObject::unref()
 #ifdef TRACE_MEMORY_ALLOCS
 #include <shogun/lib/Map.h>
 extern CMap<void*, shogun::MemoryBlock>* sg_mallocs;
+
+void SGRefObject::list_memory_allocs()
+{
+	shogun::list_memory_allocs();
+}
 #endif
 
 void SGRefObject::init()

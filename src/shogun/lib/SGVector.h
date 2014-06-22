@@ -14,16 +14,17 @@
 #ifndef __SGVECTOR_H__
 #define __SGVECTOR_H__
 
-#include <shogun/lib/common.h>
-#include <shogun/lib/DataType.h>
-#include <shogun/lib/SGReferencedData.h>
+#include <shogun/lib/config.h>
 
+#include <shogun/lib/common.h>
+#include <shogun/lib/SGReferencedData.h>
 
 namespace shogun
 {
 	template <class T> class SGSparseVector;
 	template <class T> class SGMatrix;
 	class CFile;
+	class CRandom;
 
 /** @brief shogun vector */
 template<class T> class SGVector : public SGReferencedData

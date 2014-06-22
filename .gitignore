@@ -27,6 +27,8 @@ configure.log
 *.oct
 .localvimrc
 *.DS_Store
+cscope.*
+cpplint.py
 
 *~
 \#*\#
@@ -111,7 +113,6 @@ configure.log
 /examples/undocumented/libshogun/*
 !/examples/undocumented/libshogun/*.cpp
 !/examples/undocumented/libshogun/CMakeLists.txt
-examples/undocumented/python_modular/*
 !/examples/undocumented/libshogun/tools/
 !examples/undocumented/python_modular/graphical/
 !examples/undocumented/python_modular/*.py
@@ -128,8 +129,11 @@ examples/undocumented/python_modular/*
 # cmake
 /CMakeFiles/
 CMakeCache.txt
-/build
+/build*
 /third_party
 
 # protobuf
 src/shogun/io/protobuf/*.pb.*
+
+# ipython notebook
+.ipynb_checkpoints/

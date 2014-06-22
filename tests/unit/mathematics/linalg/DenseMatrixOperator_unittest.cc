@@ -122,4 +122,16 @@ TEST(DenseMatrixOperator, shift_apply)
 	EXPECT_NEAR(map_r1.norm(), map_r2.norm(), 1E-15);
 }
 
+TEST(DenseMatrixOperator, asymmetric_clone)
+{
+	const index_t length_x=2;
+	const index_t length_y=10;
+	SGMatrix<float64_t> m(length_x, length_y);
+	CDenseMatrixOperator<float64_t> *op
+			=new CDenseMatrixOperator<float64_t>(m);
+	CDenseMatrixOperator<float64_t> *op_cloned
+			=dynamic_cast<CDenseMatrixOperator<float64_t>*>(op->clone());
+	SG_UNREF(op);
+	SG_UNREF(op_cloned);
+}
 #endif // HAVE_EIGEN3

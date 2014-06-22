@@ -91,7 +91,7 @@ void CSubsetStack::add_subset(SGVector<index_t> subset)
 	/* two cases: stack is empty/stack is not empty */
 	if (m_active_subsets_stack->get_num_elements())
 	{
-		/* if there are alreay subsets, we need to map given one through
+		/* if there are already subsets, we need to map given one through
 		 * existing ones */
 
 		/* get latest current subset */
@@ -124,6 +124,11 @@ void CSubsetStack::add_subset(SGVector<index_t> subset)
 	m_active_subsets_stack->append_element(m_active_subset);
 }
 
+void CSubsetStack::add_subset_in_place(SGVector<index_t> subset)
+{
+	SG_NOTIMPLEMENTED;
+}
+
 void CSubsetStack::remove_subset()
 {
 	index_t num_subsets=m_active_subsets_stack->get_num_elements();
@@ -153,7 +158,7 @@ void CSubsetStack::remove_subset()
 	}
 	else
 	{
-		SG_DEBUG("%s::remove_subset() was called but there is no subset set."
+		SG_WARNING("%s::remove_subset() was called but there is no subset set."
 				"\n", get_name());
 	}
 }

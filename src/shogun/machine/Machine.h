@@ -12,9 +12,10 @@
 #ifndef _MACHINE_H__
 #define _MACHINE_H__
 
+#include <shogun/lib/config.h>
+
 #include <shogun/lib/common.h>
 #include <shogun/base/SGObject.h>
-#include <shogun/labels/Labels.h>
 #include <shogun/labels/BinaryLabels.h>
 #include <shogun/labels/RegressionLabels.h>
 #include <shogun/labels/MulticlassLabels.h>
@@ -27,7 +28,6 @@ namespace shogun
 
 class CFeatures;
 class CLabels;
-class CMath;
 
 /** classifier type */
 enum EMachineType
@@ -87,6 +87,7 @@ enum EMachineType
 	CT_GAUSSIANPROCESSBINARY = 530,
 	CT_GAUSSIANPROCESSMULTICLASS = 540,
 	CT_STOCHASTICSOSVM = 550,
+	CT_NEURALNETWORK = 560,
 	CT_BAGGING
 };
 

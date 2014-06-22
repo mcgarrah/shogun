@@ -20,6 +20,8 @@
 #ifndef __MATHEMATICS_H_
 #define __MATHEMATICS_H_
 
+#include <shogun/lib/config.h>
+
 #include <shogun/base/SGObject.h>
 #include <shogun/lib/common.h>
 #include <shogun/io/SGIO.h>
@@ -65,11 +67,6 @@
 #define isfinite _isfinite
 #endif
 #endif //_WIN32
-
-#ifndef NAN
-#include <stdlib.h>
-#define NAN (strtod("NAN",NULL))
-#endif
 
 /* Size of RNG seed */
 #define RNG_SEED_SIZE 256
@@ -151,7 +148,7 @@ class CMath : public CSGObject
 		/**@name min/max/abs functions.
 		*/
 		//@{
-
+		
 		///return the minimum of two integers
 		//
 		template <class T>
@@ -192,7 +189,7 @@ class CMath : public CSGObject
 				else
 					return -a;
 			}
-
+		
 		///return the absolute value of a complex number
 		static inline float64_t abs(complex128_t a)
 		{
@@ -204,7 +201,90 @@ class CMath : public CSGObject
 
 		/**@name misc functions */
 		//@{
+		
+		/** Compares the value of two floats based on eps only
+		  * @param a first value to compare
+		  * @param b second value to compare
+		  * @param eps threshold for values to be equal/different
+		  * @return true if values are equal within eps accuracy, false if not.
+		  */
+		template <class T>
+			static inline bool fequals_abs(const T& a, const T& b, 
+				const float64_t eps)
+			{
+				const T diff = CMath::abs<T>((a-b));
+				return (diff < eps);
+			}
+		
+		/** Compares the value of two floats (handles special cases, such as NaN, Inf etc.)
+		  * Note: returns true if a == b == NAN
+		  * Implementation inspired by http://floating-point-gui.de/errors/comparison/
+		  * @param a first value to compare
+		  * @param b second value to compare
+		  * @param eps threshold for values to be equal/different
+		  * @param tolerant allows linient check on float equality (within accuracy) 
+		  * @return true if values are equal within eps accuracy, false if not.
+		  */
+		template <class T>
+			static inline bool fequals(const T& a, const T& b, 
+				const float64_t eps, bool tolerant=false)
+			{
+				const T absA = CMath::abs<T>(a);
+				const T absB = CMath::abs<T>(b);
+				const T diff = CMath::abs<T>((a-b));
+				T comp;
+				
+				// Handle this separately since NAN is unordered
+				if (CMath::is_nan((float64_t)a) && CMath::is_nan((float64_t)b))
+					return true;
+				
+				// Required for JSON Serialization Tests
+				if (tolerant)
+					return CMath::fequals_abs<T>(a, b, eps);
+				
+				// handles float32_t and float64_t separately
+				if (sizeof(T) == 4)
+					comp = CMath::F_MIN_NORM_VAL32;
+				
+				else
+					comp = CMath::F_MIN_NORM_VAL64;
+				
+				if (a==b)
+					return true;
+				
+				// both a and b are 0 and relative error is less meaningful
+				else if ( (a==0) || (b==0) || (diff < comp) )
+					return (diff<(eps * comp));
+				
+				// use max(relative error, diff) to handle large eps
+				else
+				{
+					T check = ((diff/(absA + absB)) > diff)?
+						(diff/(absA + absB)):diff;
+					return (check < eps);
+				}
+			}
 
+		/* Get the corresponding absolute tolerance for unit test given a relative tolerance
+		 *
+		 * Note that a unit test will be passed only when 
+		 * \f[
+		 * |v_\text{true} - v_\text{predict}| \leq tol_\text{relative} * |v_\text{true}|
+		 * \f] which is equivalent to 
+		 * \f[
+		 * |v_\text{true} - v_\text{predict}| \leq tol_\text{absolute}
+		 * \f] where
+		 * \f[
+		 * tol_\text{absolute} = tol_\text{relative} * |v_\text{true}|
+		 * \f]
+		 *
+		 * @param true_value true value should be finite (neither NAN nor INF)
+		 * @param rel_tolorance relative tolerance should be positive and less than 1.0
+		 *
+		 * @return the corresponding absolute tolerance
+		 */
+		static float64_t get_abs_tolorance(float64_t true_value, float64_t rel_tolorance);
+		
 		static inline float64_t round(float64_t d)
 		{
 			return ::floor(d+0.5);
@@ -506,6 +586,10 @@ class CMath : public CSGObject
 
 			return area;
 		}
+
+		static bool strtof(const char* str, float32_t* float_result);
+		static bool strtod(const char* str, float64_t* double_result);
+		static bool strtold(const char* str, floatmax_t* long_double_result);
 
 		static inline int64_t factorial(int32_t n)
 		{
@@ -1259,7 +1343,7 @@ class CMath : public CSGObject
 			if (!CMath::is_finite(q))
 			{
 				SG_SWARNING("INVALID second operand to logsum(%f,%f) expect undefined results\n", p, q)
-				return NAN;
+				return NOT_A_NUMBER;
 			}
 			diff = p - q;
 			if (diff > 0)
@@ -1325,6 +1409,8 @@ class CMath : public CSGObject
 	public:
 				/**@name constants*/
 				//@{
+				/// not a number
+				static const float64_t NOT_A_NUMBER;
 				/// infinity
 				static const float64_t INFTY;
 				static const float64_t ALMOST_INFTY;
@@ -1341,6 +1427,16 @@ class CMath : public CSGObject
 				/* largest and smallest possible float64_t */
 				static const float64_t MAX_REAL_NUMBER;
 				static const float64_t MIN_REAL_NUMBER;
+				
+				/* Floating point Limits, Normalized */
+				static const float32_t F_MAX_VAL32;
+				static const float32_t F_MIN_NORM_VAL32;
+				static const float64_t F_MAX_VAL64;
+				static const float64_t F_MIN_NORM_VAL64;
+				
+				/* Floating point limits, Denormalized */
+				static const float32_t F_MIN_VAL32;
+				static const float64_t F_MIN_VAL64;
 
 	protected:
 				/// range for logtable: log(1+exp(x))  -LOGRANGE <= x <= 0

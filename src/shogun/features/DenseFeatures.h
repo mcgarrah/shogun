@@ -14,12 +14,16 @@
 #ifndef _DENSEFEATURES__H__
 #define _DENSEFEATURES__H__
 
+#include <shogun/lib/config.h>
+
 #include <shogun/lib/common.h>
 #include <shogun/lib/Cache.h>
 #include <shogun/io/File.h>
 #include <shogun/features/DotFeatures.h>
 #include <shogun/features/StringFeatures.h>
 #include <shogun/lib/DataType.h>
+
+#include <shogun/lib/SGMatrix.h>
 
 namespace shogun {
 template<class ST> class CStringFeatures;

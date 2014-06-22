@@ -59,14 +59,14 @@ CEPInferenceMethod::~CEPInferenceMethod()
 
 void CEPInferenceMethod::init()
 {
-	m_max_sweep=8;
+	m_max_sweep=15;
 	m_min_sweep=2;
 	m_tol=1e-4;
 }
 
 float64_t CEPInferenceMethod::get_negative_log_marginal_likelihood()
 {
-	if (update_parameter_hash())
+	if (parameter_hash_changed())
 		update();
 
 	return m_nlZ;
@@ -74,7 +74,7 @@ float64_t CEPInferenceMethod::get_negative_log_marginal_likelihood()
 
 SGVector<float64_t> CEPInferenceMethod::get_alpha()
 {
-	if (update_parameter_hash())
+	if (parameter_hash_changed())
 		update();
 
 	return SGVector<float64_t>(m_alpha);
@@ -82,7 +82,7 @@ SGVector<float64_t> CEPInferenceMethod::get_alpha()
 
 SGMatrix<float64_t> CEPInferenceMethod::get_cholesky()
 {
-	if (update_parameter_hash())
+	if (parameter_hash_changed())
 		update();
 
 	return SGMatrix<float64_t>(m_L);
@@ -90,7 +90,7 @@ SGMatrix<float64_t> CEPInferenceMethod::get_cholesky()
 
 SGVector<float64_t> CEPInferenceMethod::get_diagonal_vector()
 {
-	if (update_parameter_hash())
+	if (parameter_hash_changed())
 		update();
 
 	return SGVector<float64_t>(m_sttau);
@@ -98,7 +98,7 @@ SGVector<float64_t> CEPInferenceMethod::get_diagonal_vector()
 
 SGVector<float64_t> CEPInferenceMethod::get_posterior_mean()
 {
-	if (update_parameter_hash())
+	if (parameter_hash_changed())
 		update();
 
 	return SGVector<float64_t>(m_mu);
@@ -106,7 +106,7 @@ SGVector<float64_t> CEPInferenceMethod::get_posterior_mean()
 
 SGMatrix<float64_t> CEPInferenceMethod::get_posterior_covariance()
 {
-	if (update_parameter_hash())
+	if (parameter_hash_changed())
 		update();
 
 	return SGMatrix<float64_t>(m_Sigma);
@@ -114,6 +114,8 @@ SGMatrix<float64_t> CEPInferenceMethod::get_posterior_covariance()
 
 void CEPInferenceMethod::update()
 {
+	SG_DEBUG("entering\n");
+
 	// update kernel and feature matrix
 	CInferenceMethod::update();
 
@@ -243,14 +245,23 @@ void CEPInferenceMethod::update()
 		update_negative_ml();
 	}
 
-	if (sweep==m_max_sweep)
-		SG_WARNING("Maximum number of sweeps reached")
+	if (sweep==m_max_sweep && CMath::abs(m_nlZ-nlZ_old)>m_tol)
+	{
+		SG_ERROR("Maximum number (%d) of sweeps reached, but tolerance (%f) was "
+				"not yet reached. You can manually set maximum number of sweeps "
+				"or tolerance to fix this problem.\n", m_max_sweep, m_tol);
+	}
 
 	// update vector alpha
 	update_alpha();
 
 	// update matrices to compute derivatives
 	update_deriv();
+
+	// update hash of the parameters
+	update_parameter_hash();
+
+	SG_DEBUG("leaving\n");
 }
 
 void CEPInferenceMethod::update_alpha()

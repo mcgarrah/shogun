@@ -12,6 +12,8 @@
 #ifndef _DISTANCE_H___
 #define _DISTANCE_H___
 
+#include <shogun/lib/config.h>
+
 #include <stdio.h>
 
 #include <shogun/lib/common.h>
@@ -20,6 +22,7 @@
 #include <shogun/base/SGObject.h>
 #include <shogun/features/FeatureTypes.h>
 #include <shogun/features/Features.h>
+#include <shogun/lib/SGMatrix.h>
 
 namespace shogun
 {

@@ -8,16 +8,25 @@
  * Written (W) 1999-2008 Gunnar Raetsch
  * Copyright (C) 1999-2009 Fraunhofer Institute FIRST and Max-Planck-Society
  */
+#include <shogun/lib/config.h>
 #include <shogun/base/SGObject.h>
 #include <shogun/lib/common.h>
 #include <cmath>
 #include <shogun/mathematics/Math.h>
 #include <shogun/mathematics/lapack.h>
 #include <shogun/io/SGIO.h>
+#include <shogun/lib/SGVector.h>
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <float.h>
+
+#ifndef NAN
+#include <stdlib.h>
+#define NAN (strtod("NAN",NULL))
+#endif
+
 
 using namespace shogun;
 
@@ -34,13 +43,20 @@ int32_t CMath::LOGACCURACY         = 0; // 100000 steps per integer
 
 int32_t CMath::LOGRANGE            = 0; // range for logtable: log(1+exp(x))  -25 <= x <= 0
 
-const float64_t CMath::INFTY            =  -log(0.0);	// infinity
-const float64_t CMath::ALMOST_INFTY		=  +1e+20;		//a large number
-const float64_t CMath::ALMOST_NEG_INFTY =  -1000;
+const float64_t CMath::NOT_A_NUMBER    	=  NAN;
+const float64_t CMath::INFTY            =  INFINITY;	// infinity
+const float64_t CMath::ALMOST_INFTY		=  +1e+300;		//a large number
+const float64_t CMath::ALMOST_NEG_INFTY =  -1e+300;
 const float64_t CMath::PI=M_PI;
-const float64_t CMath::MACHINE_EPSILON=5E-16;
-const float64_t CMath::MAX_REAL_NUMBER=1E300;
-const float64_t CMath::MIN_REAL_NUMBER=1E-300;
+const float64_t CMath::MACHINE_EPSILON=DBL_EPSILON;
+const float64_t CMath::MAX_REAL_NUMBER=DBL_MAX;
+const float64_t CMath::MIN_REAL_NUMBER=DBL_MIN;
+const float32_t CMath::F_MAX_VAL32=FLT_MAX;
+const float32_t CMath::F_MIN_NORM_VAL32=FLT_MIN;
+const float64_t CMath::F_MAX_VAL64=DBL_MAX;
+const float64_t CMath::F_MIN_NORM_VAL64=DBL_MIN;
+const float32_t CMath::F_MIN_VAL32=(FLT_MIN * FLT_EPSILON);
+const float64_t CMath::F_MIN_VAL64=(DBL_MIN * DBL_EPSILON);
 
 #ifdef USE_LOGCACHE
 float64_t* CMath::logtable = NULL;
@@ -198,7 +214,6 @@ void CMath::linspace(float64_t* output, float64_t start, float64_t end, int32_t 
 	output[n-1] = end;
 }
 
-
 int CMath::is_nan(double f)
 {
 #ifndef HAVE_STD_ISNAN
@@ -244,4 +259,121 @@ int CMath::is_finite(double f)
 #endif // #ifndef HAVE_STD_ISFINITE
 
   return std::isfinite(f);
+}
+
+bool CMath::strtof(const char* str, float32_t* float_result)
+{
+	ASSERT(str);
+	ASSERT(float_result);
+
+	SGVector<char> buf(strlen(str)+1);
+
+	for (index_t i=0; i<buf.vlen-1; i++)
+		buf[i]=tolower(str[i]);
+	buf[buf.vlen-1]='\0';
+
+	if (strstr(buf, "inf") != NULL)
+	{
+		*float_result = CMath::INFTY;
+
+		if (strchr(buf,'-') != NULL)
+			*float_result *= -1;
+		return true;
+	}
+
+	if (strstr(buf, "nan") != NULL)
+	{
+		*float_result = CMath::NOT_A_NUMBER;
+		return true;
+	}
+
+	char* endptr = buf.vector;
+	*float_result=::strtof(str, &endptr);
+	return endptr != buf.vector;
+}
+
+bool CMath::strtod(const char* str, float64_t* double_result)
+{
+	ASSERT(str);
+	ASSERT(double_result);
+
+	SGVector<char> buf(strlen(str)+1);
+
+	for (index_t i=0; i<buf.vlen-1; i++)
+		buf[i]=tolower(str[i]);
+	buf[buf.vlen-1]='\0';
+
+	if (strstr(buf, "inf") != NULL)
+	{
+		*double_result = CMath::INFTY;
+
+		if (strchr(buf,'-') != NULL)
+			*double_result *= -1;
+		return true;
+	}
+
+	if (strstr(buf, "nan") != NULL)
+	{
+		*double_result = CMath::NOT_A_NUMBER;
+		return true;
+	}
+
+	char* endptr = buf.vector;
+	*double_result=::strtod(str, &endptr);
+	return endptr != buf.vector;
+}
+
+bool CMath::strtold(const char* str, floatmax_t* long_double_result)
+{
+	ASSERT(str);
+	ASSERT(long_double_result);
+
+	SGVector<char> buf(strlen(str)+1);
+
+	for (index_t i=0; i<buf.vlen-1; i++)
+		buf[i]=tolower(str[i]);
+	buf[buf.vlen-1]='\0';
+
+	if (strstr(buf, "inf") != NULL)
+	{
+		*long_double_result = CMath::INFTY;
+
+		if (strchr(buf,'-') != NULL)
+			*long_double_result *= -1;
+		return true;
+	}
+
+	if (strstr(buf, "nan") != NULL)
+	{
+		*long_double_result = CMath::NOT_A_NUMBER;
+		return true;
+	}
+
+	char* endptr = buf.vector;
+
+// fall back to double on win32 / cygwin since strtold is undefined there
+#if defined(WIN32) || defined(__CYGWIN__)
+	*long_double_result=::strtod(str, &endptr);
+#else
+	*long_double_result=::strtold(str, &endptr);
+#endif
+
+	return endptr != buf.vector;
+}
+
+float64_t CMath::get_abs_tolorance(float64_t true_value, float64_t rel_tolorance)
+{
+	REQUIRE(rel_tolorance > 0 && rel_tolorance < 1.0,
+		"Relative tolorance should be less than 1.0 and positive");
+	REQUIRE(is_finite(true_value),
+		"The true_value should be finite");
+	float64_t abs_tolorance = 0.0;
+	if (abs(true_value)>0.0)
+	{
+		if (log(abs(true_value)) + log(rel_tolorance) < log(F_MIN_VAL64))
+			abs_tolorance = F_MIN_VAL64;
+		else
+			abs_tolorance = abs(true_value * rel_tolorance);
+	}
+	return abs_tolorance;
 }

@@ -14,15 +14,15 @@
 #define __SGREFOBJECT_H__
 
 #include <shogun/lib/config.h>
-#include <shogun/lib/common.h>
-#include <shogun/lib/DataType.h>
-#include <shogun/lib/RefCount.h>
 
 /** \namespace shogun
  * @brief all of classes and functions are contained in the shogun namespace
  */
 namespace shogun
 {
+
+class RefCount;
+class SGRefObject;
 
 // define reference counter macros
 //
@@ -84,10 +84,7 @@ public:
 	virtual const char* get_name() const = 0;
 
 #ifdef TRACE_MEMORY_ALLOCS
-	static void list_memory_allocs()
-	{
-		shogun::list_memory_allocs();
-	}
+	static void list_memory_allocs();
 #endif
 
 private:

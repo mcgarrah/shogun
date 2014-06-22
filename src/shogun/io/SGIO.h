@@ -13,20 +13,19 @@
 #ifndef __SGIO_H__
 #define __SGIO_H__
 
+#include <shogun/lib/config.h>
+
 #include <stdio.h>
-#include <stdarg.h>
 #include <string.h>
 #include <dirent.h>
+#include <locale.h>
+#include <sys/types.h>
+
 #ifndef _WIN32
 #include <unistd.h>
 #endif
-#include <locale.h>
-
-#include <sys/types.h>
-#include <sys/stat.h>
 
 #include <shogun/lib/common.h>
-#include <shogun/base/init.h>
 
 namespace shogun
 {
